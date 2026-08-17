@@ -1,7 +1,7 @@
 # Jonathan Math — Phase 1 Design
 
 **Status:** design approved. All sections signed off by the platform owner.
-Open technical items remain — see §7.
+Stack versions verified 2026-08-17 — see §7. Open items remain — see §8.
 **Date:** 2026-08-17
 **Author:** design session with the platform owner (teacher).
 
@@ -64,8 +64,8 @@ Three containers on one VM, defined in a single `docker-compose.yml`:
 Google Compute Engine VM (static external IP)
 │
 ├─ Caddy          terminates HTTPS, automatic certificate management,
-│                 proxies to the app. Must be configured to pass through
-│                 long-lived streaming responses without buffering.
+│                 proxies to the app. Needs no special streaming
+│                 configuration — see §7.3.
 ├─ App            Next.js server: pages, API, and the chat stream
 └─ Postgres       data on a named volume
       └─ nightly pg_dump → Google Cloud Storage bucket, with a
@@ -289,29 +289,109 @@ Includes the cross-student isolation checks from §3.4.
 
 ---
 
-## 7. Open items
+## 7. Stack — verified 2026-08-17
 
-These must be resolved before or during implementation planning.
+Every version below was checked against the npm registry, nodejs.org,
+postgresql.org, or the project's own release page on the date shown. This
+replaces the unverified research that was interrupted in the design session.
 
-1. **Stack versions unverified.** Research agents investigating current
-   versions and best practice for the realtime transport, password hashing,
-   session handling, the i18n library, the ORM choice, recurrence handling, and
-   the GCE/Caddy/Postgres deployment specifics were interrupted before
-   producing verified findings. Nothing from them is recorded here. Re-run this
-   research and confirm actual current versions before committing to
-   dependencies.
-3. **Transport for chat undecided.** Server-sent events plus POST versus
-   WebSocket. Both work on a long-lived Node server; the choice hinges on total
-   complexity and is pending the research in item 1.
-4. **Application timezone not fixed.** The teacher's timezone needs to be
-   confirmed and made a deployment setting.
-5. **No domain name yet.** Required for HTTPS. See §3.1.
-6. **Rate-limit and lockout thresholds** in §5.4 are unspecified numbers.
-7. **Session lifetime and renewal policy** not yet specified.
+| Piece | Version | Notes |
+|---|---|---|
+| Node.js | **24.19.0 LTS** ("Krypton") | Active LTS. See the warning below. |
+| Next.js | 16.3.1 | Requires Node ≥20.9. Peer React 18.2+ or 19. |
+| React | 19.2.8 | |
+| PostgreSQL | **18.6** | Newest stable, supported to Nov 2030. 19 is in beta — not for this. |
+| `pg` driver | 8.23.0 | |
+| `@node-rs/argon2` | 2.1.0 | Prebuilt native binaries, so no `node-gyp` in the Docker build. |
+| `jose` | 6.2.9 | Session token signing. |
+| `luxon` | 3.7.2 | Timezone maths. See §7.2. |
+| `next-intl` | 4.13.6 | Peer range includes `^16.0.0`, so it is Next 16 ready. |
+| `zod` | 4.4.3 | Input validation at the route boundary. |
+| `vitest` | 4.1.10 | Unit tests, per §6. |
+| `@playwright/test` | 1.62.1 | The four browser paths in §6. |
+| Caddy | 2.11.4 | See §7.3. |
+
+### 7.1 Node 20 is end-of-life — use Node 24
+
+**Node.js 20 reached end-of-life on 2026-03-24** and Node 22 is now in
+maintenance only. Next.js 16 still merely *permits* Node ≥20.9, so nothing will
+warn you: a `FROM node:20` base image builds and runs perfectly while receiving
+no security patches. Pin the Docker base image to **Node 24** and treat the
+`engines` field as load-bearing.
+
+### 7.2 Temporal is not available — use Luxon
+
+The `Temporal` API would be the natural fit for §3.3's wall-clock-plus-zone
+arithmetic, and it is tempting because it is in every recent JavaScript article.
+It is not usable: MDN lists it as *limited availability* and still a TC39
+proposal rather than shipped ECMAScript, and `typeof Temporal` evaluates to
+`undefined` on Node 24.18 with no flag available to change that.
+
+**Luxon 3.7.2** is therefore the choice, and it suits the design well:
+`DateTime.fromObject({...}, { zone })` resolves a wall-clock time in a named
+IANA zone directly, which is exactly the operation §4.3 requires. Luxon also
+exposes `.isValid` / `invalidReason` for times that do not exist in a zone —
+the 02:30 that is skipped on a spring-forward morning — so the DST cases §6
+demands are detectable rather than silently wrong.
+
+Revisit Temporal only once it is Baseline and unflagged in an LTS Node.
+
+### 7.3 Chat transport: server-sent events plus POST — decided
+
+This closes the open item. **SSE for the server→client stream, ordinary POST
+for client→server sends.**
+
+- Next.js Route Handlers stream natively by returning a `ReadableStream`, and
+  this is documented and supported. **WebSocket is not mentioned anywhere in
+  the Route Handler API reference** — it has no first-class support, so it would
+  require a custom server, giving up `next start` and complicating the container.
+  That is a large structural cost for a solo maintainer.
+- Caddy needs **no configuration at all** for this: it flushes immediately and
+  ignores its own buffering settings whenever the response carries
+  `Content-Type: text/event-stream`. The §3.1 note about configuring
+  pass-through is therefore satisfied for free — but only if the endpoint really
+  does set that content type.
+- SSE reconnects on its own, which §5.4 already requires, and the
+  `Last-Event-ID` header gives the "refetch history so no message is missed in
+  the gap" behaviour a natural implementation.
+- The traffic is asymmetric and tiny: one teacher, 1:1 text threads. WebSocket's
+  bidirectional frames would buy nothing here.
+
+### 7.4 Security parameters — proposed, pending sign-off
+
+Argon2id per OWASP, which deprecates bcrypt to legacy-only status:
+**19 MiB memory, 2 iterations, parallelism 1** (OWASP's stated minimum), with a
+unique per-user salt. Tune upward if a hash takes well under one second on the
+VM.
+
+Session cookie: `HttpOnly`, `Secure`, `SameSite=Lax`, signed with `jose`.
+The lifetime and the §5.4 rate-limit numbers are proposed in §8.
 
 ---
 
-## 8. Next step
+## 8. Remaining open items
 
-Resolve item 1 above (verify current stack versions), then produce an
-implementation plan (`superpowers:writing-plans`), then implement.
+1. **Data access layer undecided.** Drizzle's stable line sits at **0.45.2,
+   released 2026-03-27 and dormant since** — that release was itself a SQL
+   injection fix, and all activity has moved to `1.0.0-rc.4`. So the choice is
+   between a stale stable, a release candidate, actively-released **Prisma
+   7.9.1**, or hand-written SQL on `pg` with `node-pg-migrate` 9.0.0. Note that
+   §3.2 already confines SQL to `db/` with one query module per entity, so the
+   no-ORM option is not the outlier it would be in another design. Needs a call.
+2. **Application timezone not fixed.** Needs to be confirmed and made a
+   deployment setting.
+3. **No domain name yet.** Required for HTTPS. See §3.1.
+4. **Rate-limit and lockout thresholds** in §5.4 — proposed: 5 failed logins per
+   username per 15 minutes then a 15-minute lockout, plus 20 per IP per 15
+   minutes. Unconfirmed.
+5. **Session lifetime and renewal policy** — proposed: 30 days for students
+   (phone-first, and a locked-out child cannot self-serve a reset), 7 days for
+   the teacher account, sliding renewal when a session is used past half its
+   life. Unconfirmed.
+
+---
+
+## 9. Next step
+
+Settle §8 item 1 and confirm items 2–5, then produce an implementation plan
+(`superpowers:writing-plans`), then implement.
