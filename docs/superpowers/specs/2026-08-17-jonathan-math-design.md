@@ -1,7 +1,8 @@
 # Jonathan Math — Phase 1 Design
 
-**Status:** design approved. All sections signed off by the platform owner.
-Stack versions verified 2026-08-17 — see §7. Open items remain — see §8.
+**Status:** design approved and fully specified. All decisions signed off by the
+platform owner. Stack versions verified 2026-08-17 — see §7. Nothing blocking;
+HTTPS is gated on a domain — see §8.
 **Date:** 2026-08-17
 **Author:** design session with the platform owner (teacher).
 
@@ -74,10 +75,8 @@ Google Compute Engine VM (static external IP)
 
 Redeploy is `git pull && docker compose up -d --build`.
 
-**Open item:** the teacher has no domain pointed at the VM yet. Certificates
-cannot be issued for a bare IP address, so a domain is required before HTTPS
-works. Until then the design runs over plain HTTP for local development only —
-students must not use it over HTTP.
+**Domain:** none registered yet, so HTTPS is not yet possible and development
+runs on `localhost`. See §8 for the constraint this places on going live.
 
 **Firewall:** expose 80 and 443 only. Postgres must not be reachable from
 outside the VM.
@@ -301,10 +300,11 @@ replaces the unverified research that was interrupted in the design session.
 | Next.js | 16.3.1 | Requires Node ≥20.9. Peer React 18.2+ or 19. |
 | React | 19.2.8 | |
 | PostgreSQL | **18.6** | Newest stable, supported to Nov 2030. 19 is in beta — not for this. |
-| `pg` driver | 8.23.0 | |
+| `pg` driver | 8.23.0 | No ORM — see §7.4. |
+| `node-pg-migrate` | 9.0.0 | Plain-SQL migrations. |
 | `@node-rs/argon2` | 2.1.0 | Prebuilt native binaries, so no `node-gyp` in the Docker build. |
 | `jose` | 6.2.9 | Session token signing. |
-| `luxon` | 3.7.2 | Timezone maths. See §7.2. |
+| `luxon` | 3.7.2 | Timezone maths. See §7.2 and §7.6. |
 | `next-intl` | 4.13.6 | Peer range includes `^16.0.0`, so it is Next 16 ready. |
 | `zod` | 4.4.3 | Input validation at the route boundary. |
 | `vitest` | 4.1.10 | Unit tests, per §6. |
@@ -357,41 +357,72 @@ for client→server sends.**
 - The traffic is asymmetric and tiny: one teacher, 1:1 text threads. WebSocket's
   bidirectional frames would buy nothing here.
 
-### 7.4 Security parameters — proposed, pending sign-off
+### 7.4 Data access: hand-written SQL on `pg` — decided
+
+No ORM. Queries are hand-written SQL in `db/queries/`, one module per entity;
+migrations are plain `.sql` files run by `node-pg-migrate` 9.0.0.
+
+This follows from §3.2, which already confines SQL to `db/` with one query
+module per entity — the discipline an ORM would enforce is structural here
+rather than borrowed from a library. Seven tables, a static schema, and no
+complex query needs make the trade worthwhile, and it sidesteps the version
+problem entirely: Drizzle's stable line is dormant, its successor is a release
+candidate, and Prisma would add a codegen step to the container build.
+
+**The accepted cost is that row types are hand-written and can drift from the
+schema.** Mitigate deliberately: every query module declares an explicit row
+type next to its SQL, and the integration tests of §6 run against a real
+Postgres, so a column rename that breaks a query fails a test rather than
+surfacing in production. Do not skip the integration test for a query module on
+the grounds that it is "just a select" — that test *is* the type check.
+
+### 7.5 Security parameters — decided
 
 Argon2id per OWASP, which deprecates bcrypt to legacy-only status:
-**19 MiB memory, 2 iterations, parallelism 1** (OWASP's stated minimum), with a
-unique per-user salt. Tune upward if a hash takes well under one second on the
-VM.
+**19 MiB memory, 2 iterations, parallelism 1**, unique per-user salt. Tune
+upward if a hash takes well under one second on the VM.
 
 Session cookie: `HttpOnly`, `Secure`, `SameSite=Lax`, signed with `jose`.
-The lifetime and the §5.4 rate-limit numbers are proposed in §8.
+
+| Setting | Value |
+|---|---|
+| Student session lifetime | 90 days |
+| Teacher session lifetime | 7 days |
+| Renewal | Sliding — extended when a session is used past half its life |
+| Lockout | 5 failed logins per username per 15 min → 15 min lockout |
+| IP throttle | 20 failed logins per IP per 15 min |
+
+Students get the long session because a locked-out young student cannot
+self-serve a reset — every lockout becomes a message to the teacher. The
+teacher session is short because that account can reach every student's data.
+
+### 7.6 Timezone: `Asia/Almaty`
+
+UTC+5, the deployment default for new slots, set via environment variable.
+
+**`Asia/Almaty` has no daylight-saving transitions**, so the DST tests §6
+requires cannot be written against it. They are still required: `class_slots`
+carries a per-slot `timezone` (§4.3), so a student abroad or a future move
+brings DST into scope, and the expansion function must be correct before that
+happens rather than after. Write those cases against **`Europe/London`** as a
+fixture zone — spring-forward gap and autumn ambiguity both — and treat the
+zone as a parameter throughout, never as a constant.
 
 ---
 
-## 8. Remaining open items
+## 8. Deferred: HTTPS and domain
 
-1. **Data access layer undecided.** Drizzle's stable line sits at **0.45.2,
-   released 2026-03-27 and dormant since** — that release was itself a SQL
-   injection fix, and all activity has moved to `1.0.0-rc.4`. So the choice is
-   between a stale stable, a release candidate, actively-released **Prisma
-   7.9.1**, or hand-written SQL on `pg` with `node-pg-migrate` 9.0.0. Note that
-   §3.2 already confines SQL to `db/` with one query module per entity, so the
-   no-ORM option is not the outlier it would be in another design. Needs a call.
-2. **Application timezone not fixed.** Needs to be confirmed and made a
-   deployment setting.
-3. **No domain name yet.** Required for HTTPS. See §3.1.
-4. **Rate-limit and lockout thresholds** in §5.4 — proposed: 5 failed logins per
-   username per 15 minutes then a 15-minute lockout, plus 20 per IP per 15
-   minutes. Unconfirmed.
-5. **Session lifetime and renewal policy** — proposed: 30 days for students
-   (phone-first, and a locked-out child cannot self-serve a reset), 7 days for
-   the teacher account, sliding renewal when a session is used past half its
-   life. Unconfirmed.
+No domain is registered yet. Certificates cannot be issued for a bare IP, so
+development and testing run on `localhost` and the hostname stays an
+environment variable, making the switch a one-line change plus a Caddy reload.
+
+> **No student may be onboarded until HTTPS is working.** Phase 1 issues
+> passwords over the wire and carries a teacher's private notes on children.
+> Plain HTTP exposes both. This is a hard gate on going live, not a to-do.
 
 ---
 
 ## 9. Next step
 
-Settle §8 item 1 and confirm items 2–5, then produce an implementation plan
-(`superpowers:writing-plans`), then implement.
+Design and stack are settled; nothing is blocking. Produce an implementation
+plan (`superpowers:writing-plans`), then implement.
