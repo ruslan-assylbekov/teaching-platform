@@ -1,8 +1,10 @@
 # Jonathan Math — Phase 1 Design
 
 **Status:** design approved and fully specified. All decisions signed off by the
-platform owner. Stack versions verified 2026-08-17 — see §7. Nothing blocking;
-HTTPS is gated on a domain — see §8.
+platform owner. Stack versions verified 2026-08-17 — see §7; build-level
+behaviour verified by building the stack — see §7.7, which also **corrects a
+false claim about Luxon** in §7.2. Nothing blocking; HTTPS is gated on a
+domain — see §8.
 **Date:** 2026-08-17
 **Author:** design session with the platform owner (teacher).
 
@@ -307,8 +309,10 @@ replaces the unverified research that was interrupted in the design session.
 | `luxon` | 3.7.2 | Timezone maths. See §7.2 and §7.6. |
 | `next-intl` | 4.13.6 | Peer range includes `^16.0.0`, so it is Next 16 ready. |
 | `zod` | 4.4.3 | Input validation at the route boundary. |
-| `vitest` | 4.1.10 | Unit tests, per §6. |
+| `vitest` | 4.1.10 | Unit tests, per §6. Engines allow Node 24. |
 | `@playwright/test` | 1.62.1 | The four browser paths in §6. |
+| TypeScript | **5.9.3** | Pin the 5.x line. See §7.7. |
+| npm | 12.0.2 | Blocks install scripts by default. See §7.7. |
 | Caddy | 2.11.4 | See §7.3. |
 
 ### 7.1 Node 20 is end-of-life — use Node 24
@@ -329,10 +333,29 @@ proposal rather than shipped ECMAScript, and `typeof Temporal` evaluates to
 
 **Luxon 3.7.2** is therefore the choice, and it suits the design well:
 `DateTime.fromObject({...}, { zone })` resolves a wall-clock time in a named
-IANA zone directly, which is exactly the operation §4.3 requires. Luxon also
-exposes `.isValid` / `invalidReason` for times that do not exist in a zone —
-the 02:30 that is skipped on a spring-forward morning — so the DST cases §6
-demands are detectable rather than silently wrong.
+IANA zone directly, which is exactly the operation §4.3 requires. Verified on
+Node 24.18 with Luxon 3.7.2: `17:00` in `Europe/London` resolves to
+`+00:00` in January and `+01:00` in July, so the wall-clock guarantee §4.3
+depends on genuinely holds.
+
+**Correction (verified 2026-08-17): Luxon does *not* flag times that do not
+exist in a zone.** An earlier draft of this section claimed `.isValid` /
+`invalidReason` report the 01:30 skipped on a spring-forward morning. They do
+not. `DateTime.fromObject({year: 2026, month: 3, day: 29, hour: 1, minute: 30},
+{ zone: 'Europe/London' })` returns `isValid === true`, `invalidReason === null`,
+and a time silently shifted forward to `02:30+01:00`. Nonexistent local times
+are therefore **silently wrong by default** — the exact failure mode this
+section claimed was covered.
+
+Detect the gap by round-tripping the wall-clock fields instead: if
+`dt.hour !== requested.hour || dt.minute !== requested.minute`, the requested
+time did not exist in that zone. The occurrence expansion of §3.3 must apply
+this check and decide explicitly, rather than trusting `.isValid`.
+
+Ambiguous times — the 01:30 that happens twice on an autumn fall-back morning —
+also return `isValid === true`, resolving to the **earlier** offset (`+01:00`
+on `2026-10-25`). That is a defensible default, but it is a default, not a
+detection. Both cases are required test material for §6.
 
 Revisit Temporal only once it is Baseline and unflagged in an LTS Node.
 
@@ -408,9 +431,60 @@ happens rather than after. Write those cases against **`Europe/London`** as a
 fixture zone — spring-forward gap and autumn ambiguity both — and treat the
 zone as a parameter throughout, never as a constant.
 
----
+### 7.7 Build-level findings — verified by building the stack 2026-08-17
 
-## 8. Deferred: HTTPS and domain
+The versions in §7 were checked against registries. These five findings come
+from installing the stack and running `next build` to completion on Node 24.18.0
+with npm 12.0.2. Each one silently breaks a build or a security parameter, and
+none is discoverable from a version number.
+
+**`package.json` must set `"type": "module"`.** Without it Turbopack fails the
+build outright with *"Specified module format (CommonJs) is not matching the
+module format of the source code (EcmaScript Modules)"* on every `.tsx` file.
+The error names the module format, not the missing field, so it reads like a
+transform misconfiguration. With the field set, the same source compiles in
+~0.5s.
+
+**`Algorithm.Argon2id` cannot be referenced.** `@node-rs/argon2` declares
+`Algorithm` as an ambient `const enum`, and Next.js mandates
+`isolatedModules`, so the natural spelling fails type checking with
+*TS2748: Cannot access ambient const enums when 'isolatedModules' is enabled*.
+Use a type-only import and a named numeric constant, which type-checks clean:
+
+```ts
+import type { Algorithm } from '@node-rs/argon2'
+const ARGON2ID = 2 as Algorithm
+```
+
+Verified that this produces genuine Argon2id at the §7.5 parameters — the
+encoded hash reads `$argon2id$v=19$m=19456,t=2,p=1$`. Omitting `algorithm`
+entirely also yields argon2id, since it is the library default, but write it
+explicitly: a security parameter should not rest on a default that a minor
+release could revisit.
+
+**npm 12 blocks dependency install scripts by default.** `@swc/core`
+(postinstall) and `@parcel/watcher` (`node-gyp rebuild`) are both blocked with a
+warning, not an error. This is a security improvement worth keeping, and it is
+**verified not to break the build** — `next build` completes green with both
+blocked, because Next ships prebuilt platform binaries as optional
+dependencies. Do not "fix" the warning by approving scripts in the Dockerfile;
+approving `@parcel/watcher` in particular would pull `node-gyp` and a C++
+toolchain into the image, which is exactly what choosing `@node-rs/argon2`
+(§7) was meant to avoid.
+
+**TypeScript's `latest` tag is 7.0.2 — do not take it.** TypeScript 7 is the
+native compiler rewrite; `npm i -D typescript` silently installs it, and
+likewise `@types/node` resolves to 26.x, which describes a Node runtime two
+majors ahead of the pinned one. Pin `typescript@5.9.3` and `@types/node@24`,
+both verified against this stack. Note also that Next rewrites `tsconfig.json`
+on first build and *mandates* `"jsx": "react-jsx"`, overriding `"preserve"`.
+
+**Node 24 executes TypeScript directly.** `node script.ts` runs with no loader,
+flag, or build step, provided relative imports carry explicit `.ts`
+extensions. The seed script of §5.5 and any operational scripts therefore need
+no separate compile step.
+
+---
 
 No domain is registered yet. Certificates cannot be issued for a bare IP, so
 development and testing run on `localhost` and the hostname stays an
