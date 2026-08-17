@@ -433,10 +433,12 @@ zone as a parameter throughout, never as a constant.
 
 ### 7.7 Build-level findings — verified by building the stack 2026-08-17
 
-The versions in §7 were checked against registries. These five findings come
-from installing the stack and running `next build` to completion on Node 24.18.0
-with npm 12.0.2. Each one silently breaks a build or a security parameter, and
-none is discoverable from a version number.
+The versions in §7 were checked against registries. The findings below come from
+actually installing the stack and running `next build` to completion on Node
+24.18.0 with npm 12.0.2 — except the last, which comes from reading the official
+Postgres image Dockerfiles. Each one silently breaks a build, a security
+parameter, or the durability of the database, and none is discoverable from a
+version number.
 
 **`package.json` must set `"type": "module"`.** Without it Turbopack fails the
 build outright with *"Specified module format (CommonJs) is not matching the
@@ -482,9 +484,27 @@ on first build and *mandates* `"jsx": "react-jsx"`, overriding `"preserve"`.
 **Node 24 executes TypeScript directly.** `node script.ts` runs with no loader,
 flag, or build step, provided relative imports carry explicit `.ts`
 extensions. The seed script of §5.5 and any operational scripts therefore need
-no separate compile step.
+no separate compile step. Verified further: relative `.ts` specifiers also
+resolve under `next build` (with `allowImportingTsExtensions`) and under Vitest,
+so one import style works everywhere and no path alias is needed.
+
+**Postgres 18 moved its data directory — the usual volume mount silently loses
+all data.** Every Postgres Compose example in circulation mounts
+`pgdata:/var/lib/postgresql/data`, which was correct through Postgres 17. In
+18 the official image sets `PGDATA=/var/lib/postgresql/18/docker` and declares
+`VOLUME /var/lib/postgresql` (verified in the `docker-library/postgres`
+Dockerfiles for both the bookworm and alpine variants). Mounting the old path
+therefore attaches the named volume to a directory the server does not write to:
+the cluster lands in the container's writable layer, works perfectly, and is
+destroyed by the next `docker compose down`. The §3.1 backup story would be
+backing up a database that cannot survive a redeploy.
+
+**Mount `pgdata:/var/lib/postgresql`** — no `/data` suffix. This is worth an
+explicit restore test before any student data exists.
 
 ---
+
+## 8. Open constraint: no domain, therefore no HTTPS
 
 No domain is registered yet. Certificates cannot be issued for a bare IP, so
 development and testing run on `localhost` and the hostname stays an
