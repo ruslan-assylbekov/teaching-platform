@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:18.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jonathan_math}
+      POSTGRES_USER: ${POSTGRES_USER:-jonathan_math}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    # Postgres 18 moved its data directory (PGDATA=/var/lib/postgresql/18/docker,
+    # VOLUME /var/lib/postgresql). Mounting the traditional .../data path
+    # silently attaches the volume to a directory the server never writes to,
+    # so the cluster lives in the container's writable layer and is destroyed
+    # by the next `docker compose down`. Do not add a /data suffix here.
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jonathan_math}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No host port mapping: Postgres must not be reachable from outside
+    # the VM (design spec §3.1 firewall note). Only the app container can
+    # reach it, over the default compose network.
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-jonathan_math}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jonathan_math}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+
+  # Not part of `docker compose up` (profile-gated) — a one-off runner for
+  # migrations and the seed script. Built from the `builder` stage, which
+  # still has devDependencies (node-pg-migrate) and the full source tree,
+  # unlike the trimmed `runner` image `app` uses. Postgres still has no host
+  # port mapping, so this is how migrations/seeding reach it without
+  # weakening the §3.1 firewall requirement for a real deploy.
+  #   docker compose run --rm tools npm run migrate -- up
+  #   docker compose run --rm tools node scripts/seed-teacher.ts
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    profiles: ["tools"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-jonathan_math}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jonathan_math}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.11.4
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

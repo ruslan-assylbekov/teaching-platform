@@ -1,0 +1,157 @@
+/* Warm academic direction (design spec §2): cream ground, Georgia serif
+   headings, deep forest green, small-caps labels. Light and dark both
+   built from the same identity, not an inverted light theme.
+
+   Muted text and label greys use the corrected values from the Phase 1
+   plan index, not the original mockup's — #7a736c (~4.2:1) and #a09890
+   (~2.7:1) both fail WCAG AA at normal text size on #faf6ee. Dark-mode
+   values below are a first pass at the same standard and are worth a
+   final measured contrast-checker pass before shipping, same as the
+   light-mode values already were. */
+
+:root {
+  --color-bg: #faf6ee;
+  --color-surface: #ffffff;
+  --color-border: #e4ddd0;
+  --color-text: #2a231c;
+  --color-text-muted: #6b645c;
+  --color-label: #6f675e;
+  --color-accent: #1f4d3f;
+  --color-accent-solid: #1f4d3f;
+  --color-on-accent: #ffffff;
+  --color-danger: #a4342a;
+
+  --font-heading: Georgia, 'Times New Roman', Cambria, serif;
+  --font-body: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --radius: 6px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: #1c1a17;
+    --color-surface: #262320;
+    --color-border: #38332c;
+    --color-text: #f2ede4;
+    --color-text-muted: #b6ada0;
+    --color-label: #ada496;
+    --color-accent: #52a685;
+    --color-accent-solid: #2f6b54;
+    --color-on-accent: #f2ede4;
+    --color-danger: #d97a70;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #1c1a17;
+  --color-surface: #262320;
+  --color-border: #38332c;
+  --color-text: #f2ede4;
+  --color-text-muted: #b6ada0;
+  --color-label: #ada496;
+  --color-accent: #52a685;
+  --color-accent-solid: #2f6b54;
+  --color-on-accent: #f2ede4;
+  --color-danger: #d97a70;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.5em;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+.label {
+  display: inline-block;
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-label);
+}
+
+button,
+input {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.6em 1.2em;
+  background: var(--color-accent-solid);
+  color: var(--color-on-accent);
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  margin-bottom: 1em;
+}
+
+.field input {
+  padding: 0.6em 0.75em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.error-text {
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+/* Centered-card shell used by /login and /change-password (Plan 01) — the
+   only screens Plan 01 builds. The teacher admin sidebar shell and the
+   student single-column shell are Plan 02. */
+.auth-shell {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 2rem;
+}
