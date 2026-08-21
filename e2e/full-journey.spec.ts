@@ -53,44 +53,52 @@ test.describe.serial('full journey', () => {
     await expect(page).toHaveURL(/\/me$/)
   })
 
-  test('path 4: schedule renders correctly with a cancellation and a move applied', async ({ page }) => {
+  test('path 4: master calendar books a slot, then a cancellation and a move both apply', async ({ page }) => {
     await login(page, TEACHER_USERNAME, TEACHER_PASSWORD)
-    await page.goto(`/students/${studentId}?tab=schedule`)
+    await page.goto('/schedule')
 
-    await page.locator('#weekday').selectOption('0')
-    await page.locator('#startTime').fill('17:00')
-    await page.locator('#durationMinutes').fill('60')
-    await page.locator('#timezone').fill('Asia/Almaty')
-    await page.locator('#activeFrom').fill('2026-01-01')
-    await page.locator('form:has(#weekday) button[type=submit]').click()
+    // Structural selectors throughout (row by its time label, column by
+    // position, dialog by its native `open` attribute), not translated
+    // button/link text -- the teacher's default locale is 'ru' (see path
+    // 1's comment). `dialog[open].modal` narrows to whichever modal is
+    // currently topmost; `.last()` picks the ConfirmDialog over the
+    // occurrence panel underneath it when both are open at once (native
+    // <dialog> stacks rather than replacing).
+    const mondayColumn = 0
+    const row = page.locator('table.schedule-grid tbody tr', { has: page.locator('th', { hasText: '17:00' }) })
 
-    // Two <ul class="occurrence-list"> exist on this page: the slot list
-    // (edit/delete) and the upcoming-occurrences list (cancel/move) --
-    // structural selectors (which form is inside), not text, since labels
-    // are locale-dependent.
-    const upcomingList = page.locator('ul.occurrence-list').nth(1)
-    await expect(upcomingList.locator('.occurrence-row').first()).toBeVisible()
+    await row.locator('td').nth(mondayColumn).locator('button.grid-cell-empty').click()
+    await page.locator('dialog[open].modal').last().getByRole('button', { name: studentFullName }).click()
+    await page.locator('dialog[open].modal').last().locator('button[type=submit]').click()
 
-    // Both the cancel form and the move form (nested in <details>) carry
-    // an originalDate hidden field; the cancel form is the one that isn't
-    // inside <details> and appears first in DOM order.
-    const firstRow = upcomingList.locator('.occurrence-row').nth(0)
-    const firstRowDate = await firstRow.locator('> div').first().innerText()
-    await firstRow.locator('> div > form').first().locator('button[type=submit]').click()
+    // Back on the grid: the slot now occupies Monday 17:00.
+    const occupiedCell = row.locator('td').nth(mondayColumn).locator('button.grid-cell')
+    await expect(occupiedCell).toBeVisible()
 
-    // "some row is visible" is trivially true even before the cancellation
-    // round-trips (the stale first row is still there) -- wait for that
-    // *specific* row to actually disappear, or the click below can land on
-    // a row that gets removed out from under it mid-interaction.
-    await expect(upcomingList.locator('.occurrence-row', { hasText: firstRowDate })).toHaveCount(0)
+    // Cancel this week's occurrence, gated by the confirm dialog (requirement:
+    // no destructive schedule action fires without an explicit confirm step).
+    await occupiedCell.click()
+    await page.locator('dialog[open].modal').last().locator('button.button-secondary').click()
+    await page.locator('dialog[open].modal').last().locator('button.button-danger').click()
+    await expect(row.locator('td').nth(mondayColumn).locator('.badge-cancelled')).toBeVisible()
 
-    const secondRow = upcomingList.locator('.occurrence-row').nth(0)
-    await secondRow.locator('details summary').click()
-    await expect(secondRow.locator('input[name="newDate"]')).toBeVisible()
-    await secondRow.locator('input[name="newDate"]').fill('2026-01-14')
-    await secondRow.locator('details form button[type=submit]').click()
+    // The cancellation is scoped to this week's date only -- next week's
+    // occurrence of the same recurring slot is untouched. Move that one.
+    await page.locator('nav.week-nav a').nth(2).click()
+    const nextWeekRow = page.locator('table.schedule-grid tbody tr', { has: page.locator('th', { hasText: '17:00' }) })
+    await nextWeekRow.locator('td').nth(mondayColumn).locator('button.grid-cell').click()
 
-    await expect(page.locator('.badge-moved').first()).toBeVisible()
+    const futureDate = (() => {
+      const date = new Date()
+      date.setDate(date.getDate() + 30)
+      return date.toISOString().slice(0, 10)
+    })()
+    const movePanel = page.locator('dialog[open].modal').last()
+    await movePanel.locator('details').nth(0).locator('summary').click()
+    await movePanel.locator('details').nth(0).locator('input[name="newDate"]').fill(futureDate)
+    await movePanel.locator('details').nth(0).locator('button[type=submit]').click()
+
+    await expect(nextWeekRow.locator('td').nth(mondayColumn).locator('.badge-moved')).toBeVisible()
   })
 
   test('path 3: a message travels teacher -> student and student -> teacher, surviving a reconnect', async ({ browser }) => {

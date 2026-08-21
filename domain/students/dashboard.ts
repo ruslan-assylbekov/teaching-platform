@@ -12,16 +12,15 @@ import { toClassOverride, toClassSlot } from '../schedule/mappers.ts'
 // design ever wants a longer or shorter look-ahead.
 const UPCOMING_HORIZON_DAYS = 14
 
-// Teacher-only fields (private_notes, parent_phone, parent_name) are
-// deliberately absent from this shape -- design spec §4.2 requires they
-// never reach a student client, and the simplest way to guarantee that is
-// to never put them in the object a student-facing page can render.
+// Teacher-only fields (private_notes, parent_phone, parent_name) and
+// objectives (student must not see their own objectives) are deliberately
+// absent from this shape -- the simplest way to guarantee that is to never
+// put them in the object a student-facing page can render.
 export type StudentDashboard = {
   fullName: string
   grade: string
   school: string | null
   level: string
-  objectives: string | null
   startedAt: string
   occurrences: Occurrence[]
 }
@@ -71,7 +70,6 @@ export async function getStudentDashboard(
     grade: student.grade,
     school: student.school,
     level: student.level,
-    objectives: student.objectives,
     startedAt: student.started_at,
     occurrences,
   }

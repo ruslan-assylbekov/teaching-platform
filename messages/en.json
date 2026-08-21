@@ -20,6 +20,7 @@
   },
   "Teacher": {
     "today": "Today",
+    "schedule": "Schedule",
     "students": "Students",
     "newStudent": "New student",
     "archivedStudents": "Archived students"
@@ -62,7 +63,6 @@
   },
   "StudentDetail": {
     "profileTab": "Profile",
-    "scheduleTab": "Schedule",
     "chatTab": "Chat",
     "reissue": "Reissue credentials",
     "reissueWarning": "This invalidates the student's current session and password. They will need the new one-time password to log in again.",
@@ -77,6 +77,7 @@
   },
   "Schedule": {
     "addSlot": "Add a weekly slot",
+    "classLabel": "Class",
     "weekday": "Day",
     "startTime": "Start time",
     "duration": "Duration (minutes)",
@@ -85,7 +86,7 @@
     "activeUntil": "Active until (optional)",
     "save": "Save",
     "delete": "Delete",
-    "conflictError": "This overlaps with the {weekday} {time} slot.",
+    "conflictError": "This overlaps with {name}''s {weekday} {time} slot.",
     "upcoming": "Upcoming occurrences",
     "noUpcoming": "No upcoming occurrences.",
     "cancelAction": "Cancel this occurrence",
@@ -97,6 +98,29 @@
     "statusCancelled": "Cancelled",
     "movedFrom": "moved from {date}",
     "pastNotice": "This occurrence is in the past."
+  },
+  "TeacherSchedule": {
+    "title": "Schedule",
+    "previousWeek": "Previous week",
+    "thisWeek": "This week",
+    "nextWeek": "Next week",
+    "pickStudent": "Choose a student",
+    "noActiveStudents": "No active students to schedule.",
+    "newSlotFor": "New weekly slot for {name}",
+    "back": "Back",
+    "editSlot": "Edit recurring slot",
+    "confirmCancel": "Cancel this class? This cannot be undone.",
+    "confirmDeleteSlot": "Delete this recurring slot entirely, including all its future occurrences? This cannot be undone."
+  },
+  "Toast": {
+    "changesSaved": "Changes saved",
+    "studentArchived": "Student archived",
+    "studentRestored": "Student restored",
+    "studentDeleted": "Student deleted",
+    "slotSaved": "Class scheduled",
+    "slotDeleted": "Recurring slot deleted",
+    "lessonCancelled": "Class cancelled",
+    "lessonMoved": "Class moved"
   },
   "Weekday": {
     "monday": "Monday",
@@ -111,19 +135,12 @@
     "home": "Home",
     "chat": "Chat"
   },
-  "StudentMe": {
-    "nextClass": "Next class",
-    "noNextClass": "No upcoming classes scheduled.",
-    "upcoming": "Upcoming classes",
-    "noUpcoming": "Nothing else coming up.",
-    "objectives": "Objectives",
-    "noObjectives": "No objectives set yet."
-  },
   "StudentChat": {
     "stub": "Chat is coming in a future update."
   },
   "Common": {
     "cancel": "Cancel",
+    "close": "Close",
     "logOut": "Log out"
   },
   "ErrorPage": {

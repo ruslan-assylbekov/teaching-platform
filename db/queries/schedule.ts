@@ -46,6 +46,25 @@ export async function listSlotsForStudent(studentId: string, context: StudentAcc
   return result.rows
 }
 
+export type SlotWithStudent = SlotRow & { student_full_name: string }
+
+// Backs both the master calendar's grid (all active students at once) and
+// the global exclusivity check in domain/schedule/manage.ts::checkConflict
+// -- a slot belonging to an archived student doesn't block booking that
+// weekday/time for someone else, matching how listActive() already hides
+// archived students from the rest of the teacher UI.
+export async function listAllActiveSlots(): Promise<SlotWithStudent[]> {
+  const result = await pool.query<SlotWithStudent>(
+    `SELECT cs.*, s.full_name AS student_full_name
+     FROM class_slots cs
+     JOIN students s ON s.user_id = cs.student_id
+     JOIN users u ON u.id = s.user_id
+     WHERE u.status = 'active'
+     ORDER BY cs.weekday, cs.start_time`,
+  )
+  return result.rows
+}
+
 export async function createSlot(params: {
   studentId: string
   weekday: number

@@ -3,13 +3,10 @@ import { getTranslations } from 'next-intl/server'
 import { ChatPanel } from '../../../../components/chat/ChatPanel.tsx'
 import { getStudentDetail } from '../../../../domain/students/manage.ts'
 import { ProfileTab } from './ProfileTab.tsx'
-import { ScheduleTab } from './ScheduleTab.tsx'
 
 type SearchParams = {
   tab?: string
   deleteError?: string
-  conflictWeekday?: string
-  conflictTime?: string
 }
 
 export default async function StudentDetailPage({
@@ -21,19 +18,12 @@ export default async function StudentDetailPage({
 }) {
   const { id } = await params
   const sp = await searchParams
-  const activeTab = sp.tab === 'schedule' ? 'schedule' : sp.tab === 'chat' ? 'chat' : 'profile'
+  const activeTab = sp.tab === 'chat' ? 'chat' : 'profile'
 
   const student = await getStudentDetail(id)
   if (!student) notFound()
 
   const t = await getTranslations('StudentDetail')
-  const tSchedule = await getTranslations('Schedule')
-  const tWeekday = await getTranslations('Weekday')
-
-  const conflict =
-    sp.conflictWeekday !== undefined && sp.conflictTime !== undefined
-      ? { weekday: Number(sp.conflictWeekday), time: sp.conflictTime }
-      : null
 
   return (
     <div>
@@ -42,16 +32,12 @@ export default async function StudentDetailPage({
         <a className="tab-link" aria-current={activeTab === 'profile' ? 'page' : undefined} href={`/students/${id}?tab=profile`}>
           {t('profileTab')}
         </a>
-        <a className="tab-link" aria-current={activeTab === 'schedule' ? 'page' : undefined} href={`/students/${id}?tab=schedule`}>
-          {t('scheduleTab')}
-        </a>
         <a className="tab-link" aria-current={activeTab === 'chat' ? 'page' : undefined} href={`/students/${id}?tab=chat`}>
           {t('chatTab')}
         </a>
       </nav>
 
       {activeTab === 'profile' && <ProfileTab student={student} deleteError={sp.deleteError === '1'} />}
-      {activeTab === 'schedule' && <ScheduleTab studentId={id} conflict={conflict} t={tSchedule} tWeekday={tWeekday} />}
       {activeTab === 'chat' && <ChatPanel studentId={id} selfSender="teacher" />}
     </div>
   )

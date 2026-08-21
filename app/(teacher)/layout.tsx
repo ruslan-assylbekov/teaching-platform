@@ -30,6 +30,9 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
         <Link className="sidebar-pinned" href="/">
           {t('today')}
         </Link>
+        <Link className="sidebar-pinned" href="/schedule">
+          {t('schedule')}
+        </Link>
 
         <div>
           <h3 className="label sidebar-section-title">{t('students')}</h3>

@@ -10,6 +10,7 @@ import {
   updateStudentProfile,
 } from '../../../../domain/students/manage.ts'
 import { reissueCredentials } from '../../../../domain/students/onboarding.ts'
+import { withToast } from '../../../../lib/toast.ts'
 
 export async function updateProfileAction(studentId: string, formData: FormData): Promise<void> {
   const fullName = String(formData.get('fullName') ?? '').trim()
@@ -33,21 +34,25 @@ export async function updateProfileAction(studentId: string, formData: FormData)
   })
   revalidatePath(`/students/${studentId}`)
   revalidatePath('/', 'layout')
+  redirect(withToast(`/students/${studentId}?tab=profile`, 'changesSaved'))
 }
 
-// Stays on the same detail page rather than redirecting -- the teacher can
-// see the archived/restored state take effect immediately and undo it
-// right there (findByIdWithAccount still resolves an archived student).
+// Stays on the same detail page rather than navigating elsewhere -- the
+// teacher can see the archived/restored state take effect immediately and
+// undo it right there (findByIdWithAccount still resolves an archived
+// student). Still redirects to itself so the toast can ride along.
 export async function archiveAction(studentId: string): Promise<void> {
   await archiveStudent(studentId)
   revalidatePath(`/students/${studentId}`)
   revalidatePath('/', 'layout')
+  redirect(withToast(`/students/${studentId}?tab=profile`, 'studentArchived'))
 }
 
 export async function unarchiveAction(studentId: string): Promise<void> {
   await unarchiveStudent(studentId)
   revalidatePath(`/students/${studentId}`)
   revalidatePath('/', 'layout')
+  redirect(withToast(`/students/${studentId}?tab=profile`, 'studentRestored'))
 }
 
 // The student no longer exists after this -- redirect away, unlike
@@ -62,7 +67,7 @@ export async function deleteAction(studentId: string, formData: FormData): Promi
 
   await deleteStudent(studentId)
   revalidatePath('/', 'layout')
-  redirect('/students')
+  redirect(withToast('/students', 'studentDeleted'))
 }
 
 // Same "must show a secret exactly once" constraint as onboarding's create

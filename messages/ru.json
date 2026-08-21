@@ -20,6 +20,7 @@
   },
   "Teacher": {
     "today": "Сегодня",
+    "schedule": "Расписание",
     "students": "Ученики",
     "newStudent": "Новый ученик",
     "archivedStudents": "Архив учеников"
@@ -62,7 +63,6 @@
   },
   "StudentDetail": {
     "profileTab": "Профиль",
-    "scheduleTab": "Расписание",
     "chatTab": "Чат",
     "reissue": "Перевыпустить данные для входа",
     "reissueWarning": "Это аннулирует текущий сеанс и пароль ученика. Для входа потребуется новый одноразовый пароль.",
@@ -77,6 +77,7 @@
   },
   "Schedule": {
     "addSlot": "Добавить еженедельное занятие",
+    "classLabel": "Занятие",
     "weekday": "День",
     "startTime": "Время начала",
     "duration": "Длительность (мин.)",
@@ -85,7 +86,7 @@
     "activeUntil": "Действует до (необязательно)",
     "save": "Сохранить",
     "delete": "Удалить",
-    "conflictError": "Пересекается с занятием {weekday} в {time}.",
+    "conflictError": "Пересекается с занятием {name} {weekday} в {time}.",
     "upcoming": "Ближайшие занятия",
     "noUpcoming": "Ближайших занятий нет.",
     "cancelAction": "Отменить это занятие",
@@ -97,6 +98,29 @@
     "statusCancelled": "Отменено",
     "movedFrom": "перенесено с {date}",
     "pastNotice": "Это занятие уже прошло."
+  },
+  "TeacherSchedule": {
+    "title": "Расписание",
+    "previousWeek": "Предыдущая неделя",
+    "thisWeek": "Эта неделя",
+    "nextWeek": "Следующая неделя",
+    "pickStudent": "Выберите ученика",
+    "noActiveStudents": "Нет активных учеников для записи.",
+    "newSlotFor": "Новое еженедельное занятие для {name}",
+    "back": "Назад",
+    "editSlot": "Редактировать еженедельное занятие",
+    "confirmCancel": "Отменить это занятие? Это действие нельзя отменить.",
+    "confirmDeleteSlot": "Удалить это еженедельное занятие полностью, включая все будущие даты? Это действие нельзя отменить."
+  },
+  "Toast": {
+    "changesSaved": "Изменения сохранены",
+    "studentArchived": "Ученик перемещён в архив",
+    "studentRestored": "Ученик восстановлен",
+    "studentDeleted": "Ученик удалён",
+    "slotSaved": "Занятие запланировано",
+    "slotDeleted": "Еженедельное занятие удалено",
+    "lessonCancelled": "Занятие отменено",
+    "lessonMoved": "Занятие перенесено"
   },
   "Weekday": {
     "monday": "Понедельник",
@@ -111,19 +135,12 @@
     "home": "Главная",
     "chat": "Чат"
   },
-  "StudentMe": {
-    "nextClass": "Следующее занятие",
-    "noNextClass": "Занятия пока не запланированы.",
-    "upcoming": "Ближайшие занятия",
-    "noUpcoming": "Больше ничего не запланировано.",
-    "objectives": "Цели",
-    "noObjectives": "Цели ещё не заданы."
-  },
   "StudentChat": {
     "stub": "Чат появится в одном из следующих обновлений."
   },
   "Common": {
     "cancel": "Отмена",
+    "close": "Закрыть",
     "logOut": "Выйти"
   },
   "ErrorPage": {

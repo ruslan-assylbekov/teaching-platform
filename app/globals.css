@@ -321,6 +321,123 @@ input {
   border-radius: var(--radius);
 }
 
+/* Master schedule calendar (components/schedule/WeekCalendarGrid.tsx) --
+   the "Excel table" view: rows are times, columns are weekdays. */
+.week-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.schedule-grid-wrap {
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+.schedule-grid {
+  /* Fixed column widths (rather than content-driven auto layout) --
+     otherwise which cells happen to be booked in a given week shifts
+     column widths on every navigation, and the weekday/date header text
+     wraps whenever its column happens to come out narrower that week. */
+  table-layout: fixed;
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+}
+
+.schedule-grid th:first-child,
+.schedule-grid td:first-child {
+  width: 4.5rem;
+}
+
+.schedule-grid th,
+.schedule-grid td {
+  border: 1px solid var(--color-border);
+  padding: 0.25rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.schedule-grid thead th {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  padding: 0.5rem 0.25rem;
+  white-space: nowrap;
+}
+
+.schedule-grid tbody th {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-label);
+  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+}
+
+.grid-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.4rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.grid-cell span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-cell-empty {
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+.grid-cell-empty:hover {
+  background: var(--color-bg);
+}
+
+.grid-cell-scheduled {
+  background: var(--color-bg);
+  outline: 1px solid var(--color-border);
+}
+
+.grid-cell-moved {
+  outline: 1px solid var(--color-accent);
+}
+
+.grid-cell-cancelled {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+.week-nav-arrow {
+  min-width: 2.25rem;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.roster-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
 /* Centered-card shell used by /login and /change-password (Plan 01) — the
    only screens Plan 01 builds. The teacher admin sidebar shell and the
    student single-column shell are Plan 02. */
@@ -394,6 +511,70 @@ input {
   border-radius: var(--radius);
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+/* Modal (components/ui/Modal.tsx) -- native <dialog>, styled to match the
+   .card surface. Base for the roster picker, occurrence panel, and
+   ConfirmDialog. */
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25em;
+}
+
+/* Toast (components/ui/ToastProvider.tsx). */
+.toast-stack {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75em 1em;
+  border-radius: var(--radius);
+  background: var(--color-accent-solid);
+  color: var(--color-on-accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.toast-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.85;
 }
 
 .locale-switcher {

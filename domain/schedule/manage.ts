@@ -15,7 +15,8 @@ export type SlotInput = {
   activeUntil: string | null
 }
 
-export type SaveSlotResult = { ok: true; slot: SlotRow } | { ok: false; conflict: ClassSlot }
+export type SlotConflict = ClassSlot & { studentId: string; studentName: string }
+export type SaveSlotResult = { ok: true; slot: SlotRow } | { ok: false; conflict: SlotConflict }
 
 export async function listSlots(studentId: string): Promise<SlotRow[]> {
   return scheduleDb.listSlotsForStudent(studentId, { role: 'teacher' })
@@ -33,16 +34,20 @@ function toCandidate(input: SlotInput): Omit<ClassSlot, 'id'> {
 }
 
 // Design spec §5.4: "Two overlapping class slots -> rejected at save,
-// naming the conflicting slot." excludeSlotId lets an edit compare against
-// every *other* slot without flagging itself.
-async function checkConflict(studentId: string, input: SlotInput, excludeSlotId?: string): Promise<ClassSlot | null> {
-  const existingRows = await scheduleDb.listSlotsForStudent(studentId, { role: 'teacher' })
+// naming the conflicting slot." Exclusivity is global -- one student per
+// weekday/time across the whole roster, not just within one student's own
+// slots -- since a solo tutor can only teach one class at a time.
+// excludeSlotId lets an edit compare against every *other* slot without
+// flagging itself.
+async function checkConflict(input: SlotInput, excludeSlotId?: string): Promise<SlotConflict | null> {
+  const existingRows = await scheduleDb.listAllActiveSlots()
   const others = excludeSlotId ? existingRows.filter((r) => r.id !== excludeSlotId) : existingRows
-  return findConflict(toCandidate(input), others.map(toClassSlot))
+  const candidates = others.map((row) => ({ ...toClassSlot(row), studentId: row.student_id, studentName: row.student_full_name }))
+  return findConflict(toCandidate(input), candidates)
 }
 
 export async function createSlot(studentId: string, input: SlotInput): Promise<SaveSlotResult> {
-  const conflict = await checkConflict(studentId, input)
+  const conflict = await checkConflict(input)
   if (conflict) return { ok: false, conflict }
 
   const slot = await scheduleDb.createSlot({
@@ -57,8 +62,8 @@ export async function createSlot(studentId: string, input: SlotInput): Promise<S
   return { ok: true, slot }
 }
 
-export async function updateSlot(slotId: string, studentId: string, input: SlotInput): Promise<SaveSlotResult> {
-  const conflict = await checkConflict(studentId, input, slotId)
+export async function updateSlot(slotId: string, input: SlotInput): Promise<SaveSlotResult> {
+  const conflict = await checkConflict(input, slotId)
   if (conflict) return { ok: false, conflict }
 
   const slot = await scheduleDb.updateSlot(slotId, {

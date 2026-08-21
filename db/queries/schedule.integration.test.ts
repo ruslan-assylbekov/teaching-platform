@@ -6,10 +6,12 @@ import {
   createSlot,
   deleteOverride,
   deleteSlot,
+  listAllActiveSlots,
   listOverridesForSlot,
   listSlotsForStudent,
   updateSlot,
 } from './schedule.ts'
+import { archive } from './students.ts'
 import { create as createStudent } from './students.ts'
 import { createStudentUser } from './users.ts'
 
@@ -176,5 +178,39 @@ describe('schedule queries', () => {
 
     await deleteOverride(changedToMoved.id)
     expect(await listOverridesForSlot(slot.id)).toHaveLength(0)
+  })
+
+  // Backs the master calendar's grid and the global (cross-student)
+  // exclusivity check in domain/schedule/manage.ts -- an archived student's
+  // slot must not still occupy a weekday/time for the rest of the roster.
+  it('lists slots for every active student, excluding archived ones', async () => {
+    const { user: activeUser, student: activeStudent } = await makeStudent()
+    const { user: archivedUser } = await makeStudent()
+
+    const activeSlot = await createSlot({
+      studentId: activeUser.id,
+      weekday: 0,
+      startTime: '09:00',
+      durationMinutes: 30,
+      timezone: 'Asia/Almaty',
+      activeFrom: '2026-01-01',
+      activeUntil: null,
+    })
+    const archivedSlot = await createSlot({
+      studentId: archivedUser.id,
+      weekday: 1,
+      startTime: '10:00',
+      durationMinutes: 30,
+      timezone: 'Asia/Almaty',
+      activeFrom: '2026-01-01',
+      activeUntil: null,
+    })
+    await archive(archivedUser.id)
+
+    const slots = await listAllActiveSlots()
+    const ids = slots.map((s) => s.id)
+    expect(ids).toContain(activeSlot.id)
+    expect(ids).not.toContain(archivedSlot.id)
+    expect(slots.find((s) => s.id === activeSlot.id)?.student_full_name).toBe(activeStudent.full_name)
   })
 })
