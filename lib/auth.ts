@@ -1,6 +1,6 @@
 import { changePassword as changePasswordDomain } from '../domain/auth/change-password.ts'
 import { attemptLogin } from '../domain/auth/login.ts'
-import { createSession, getCurrentUser } from './session.ts'
+import { createSession, destroySession, getCurrentUser } from './session.ts'
 
 export type LoginOutcome =
   | { ok: true; mustChangePassword: boolean }
@@ -46,4 +46,11 @@ export async function submitChangePassword(params: {
     return { ok: true }
   }
   return { ok: false, reason: result.outcome }
+}
+
+// Not itemized as its own route in design spec §5.1, but every session
+// needs a way out of one. Kept minimal: destroy the session, callers
+// redirect to /login.
+export async function logout(): Promise<void> {
+  await destroySession()
 }

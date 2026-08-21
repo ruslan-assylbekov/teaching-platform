@@ -18,6 +18,22 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
+# postgresql-client (pg_dump) lives only in this stage, not in `runner` --
+# the production app image never needs it, only scripts/backup.ts run
+# through the `tools` service (docker-compose.yml, target: builder).
+# Debian bookworm's own postgresql-client package resolves to PG15, but the
+# server is 18.6 (design spec §7): an older pg_dump talking to a newer
+# server is unsupported and can silently miss schema features, so this
+# pulls postgresql-client-18 specifically from the official PGDG apt repo
+# instead of the distro default.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+  && install -d /usr/share/postgresql-common/pgdg \
+  && curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client-18 \
+  && rm -rf /var/lib/apt/lists/*
+
 FROM base AS runner
 ENV NODE_ENV=production
 RUN groupadd --system --gid 1001 nodejs \

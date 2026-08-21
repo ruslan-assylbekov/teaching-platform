@@ -19,6 +19,11 @@ const schema = z.object({
   TEACHER_SEED_PASSWORD: z.string().min(1),
   APP_HOSTNAME: z.string().min(1),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // Optional: only scripts/backup.ts needs this, not the app itself --
+  // requiring it here would break every local `next dev` without a GCS
+  // bucket configured. The script checks for it explicitly and fails
+  // clearly if a backup is actually attempted without it.
+  GCS_BUCKET: z.string().min(1).optional(),
 })
 
 // `next build` imports every route's module graph to classify it as

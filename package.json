@@ -15,9 +15,11 @@
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "migrate": "node-pg-migrate --migrations-dir db/migrations --migration-file-language sql",
-    "seed:teacher": "node --env-file-if-exists=.env scripts/seed-teacher.ts"
+    "seed:teacher": "node --env-file-if-exists=.env scripts/seed-teacher.ts",
+    "backup": "node --env-file-if-exists=.env scripts/backup.ts"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.0.1",
     "@node-rs/argon2": "2.1.0",
     "jose": "6.2.9",
     "luxon": "3.7.2",

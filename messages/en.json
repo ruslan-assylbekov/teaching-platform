@@ -17,5 +17,130 @@
     "mismatch": "The new passwords do not match.",
     "wrongCurrent": "Current password is incorrect.",
     "tooShort": "New password must be at least 8 characters."
+  },
+  "Teacher": {
+    "today": "Today",
+    "students": "Students",
+    "newStudent": "New student",
+    "archivedStudents": "Archived students"
+  },
+  "Today": {
+    "title": "Today",
+    "empty": "No classes today.",
+    "classAt": "{time} — {name}"
+  },
+  "StudentsEmpty": {
+    "title": "No student selected",
+    "body": "Choose a student from the sidebar, or create a new one."
+  },
+  "Archived": {
+    "title": "Archived students",
+    "empty": "No archived students.",
+    "unarchive": "Restore",
+    "backLink": "Back to students"
+  },
+  "Profile": {
+    "fullName": "Full name",
+    "grade": "Grade",
+    "school": "School",
+    "level": "Level",
+    "objectives": "Objectives",
+    "privateNotes": "Private notes (teacher only)",
+    "parentPhone": "Parent phone",
+    "parentName": "Parent name",
+    "save": "Save"
+  },
+  "NewStudent": {
+    "title": "New student",
+    "submit": "Create student",
+    "required": "Full name, grade, and level are required.",
+    "credentialsTitle": "Student credentials",
+    "credentialsWarning": "This password is shown once and cannot be recovered. Write it down or pass it to the student now.",
+    "usernameLabel": "Username",
+    "passwordLabel": "One-time password",
+    "doneButton": "Done"
+  },
+  "StudentDetail": {
+    "profileTab": "Profile",
+    "scheduleTab": "Schedule",
+    "chatTab": "Chat",
+    "reissue": "Reissue credentials",
+    "reissueWarning": "This invalidates the student's current session and password. They will need the new one-time password to log in again.",
+    "archiveButton": "Archive",
+    "unarchiveButton": "Restore",
+    "deleteButton": "Delete permanently",
+    "deleteConfirmLabel": "Type the student's full name to confirm deletion. This destroys chat history and schedule records and cannot be undone.",
+    "deleteConfirmSubmit": "Delete permanently",
+    "deleteErrorMessage": "The typed name did not match. Nothing was deleted.",
+    "archivedBadge": "Archived",
+    "chatStub": "Chat is coming in a future update."
+  },
+  "Schedule": {
+    "addSlot": "Add a weekly slot",
+    "weekday": "Day",
+    "startTime": "Start time",
+    "duration": "Duration (minutes)",
+    "timezone": "Timezone",
+    "activeFrom": "Active from",
+    "activeUntil": "Active until (optional)",
+    "save": "Save",
+    "delete": "Delete",
+    "conflictError": "This overlaps with the {weekday} {time} slot.",
+    "upcoming": "Upcoming occurrences",
+    "noUpcoming": "No upcoming occurrences.",
+    "cancelAction": "Cancel this occurrence",
+    "moveAction": "Move this occurrence",
+    "newDate": "New date",
+    "newStartTime": "New start time (optional)",
+    "note": "Note (optional)",
+    "statusMoved": "Moved",
+    "statusCancelled": "Cancelled",
+    "movedFrom": "moved from {date}",
+    "pastNotice": "This occurrence is in the past."
+  },
+  "Weekday": {
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
+  },
+  "StudentNav": {
+    "home": "Home",
+    "chat": "Chat"
+  },
+  "StudentMe": {
+    "nextClass": "Next class",
+    "noNextClass": "No upcoming classes scheduled.",
+    "upcoming": "Upcoming classes",
+    "noUpcoming": "Nothing else coming up.",
+    "objectives": "Objectives",
+    "noObjectives": "No objectives set yet."
+  },
+  "StudentChat": {
+    "stub": "Chat is coming in a future update."
+  },
+  "Common": {
+    "cancel": "Cancel",
+    "logOut": "Log out"
+  },
+  "ErrorPage": {
+    "title": "Something went wrong",
+    "body": "Please try again in a moment.",
+    "retry": "Try again"
+  },
+  "NotFoundPage": {
+    "title": "Page not found",
+    "body": "The page you're looking for doesn't exist."
+  },
+  "Chat": {
+    "reconnecting": "Reconnecting…",
+    "sending": "Sending…",
+    "failed": "Not delivered.",
+    "retry": "Retry",
+    "placeholder": "Write a message…",
+    "send": "Send"
   }
 }

@@ -11,7 +11,22 @@ const CHANGE_PASSWORD_PATH = '/change-password'
 // /change-password itself, deliberately redundant per §3.4's philosophy.
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const user = await getCurrentUser()
+
+  // The proxy layer runs before the App Router's rendering phase even
+  // starts, so a thrown error here never reaches app/error.tsx -- it hits
+  // Next's own generic top-level handler instead, and the resulting page
+  // has no theming, no locale, nothing but bare "Internal Server Error"
+  // text (still leak-free, but not the generic error page design spec
+  // §5.4 asks for). Falling back to "can't tell, so don't force a
+  // redirect" lets the request continue to the actual page, whose own
+  // getCurrentUser() call fails the same way but *within* the rendering
+  // tree, where app/error.tsx catches it properly.
+  let user: Awaited<ReturnType<typeof getCurrentUser>> = null
+  try {
+    user = await getCurrentUser()
+  } catch {
+    user = null
+  }
 
   if (user?.must_change_password && pathname !== CHANGE_PASSWORD_PATH) {
     return NextResponse.redirect(new URL(CHANGE_PASSWORD_PATH, request.url))
