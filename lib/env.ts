@@ -23,7 +23,9 @@ const schema = z.object({
   // requiring it here would break every local `next dev` without a GCS
   // bucket configured. The script checks for it explicitly and fails
   // clearly if a backup is actually attempted without it.
-  GCS_BUCKET: z.string().min(1).optional(),
+  // Preprocessed because Compose's `env_file` turns a blank `GCS_BUCKET=`
+  // line into an empty string, not an absent var, which .min(1) rejects.
+  GCS_BUCKET: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(1).optional()),
 })
 
 // `next build` imports every route's module graph to classify it as
